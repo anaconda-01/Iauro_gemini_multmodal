@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <h1>Chat with Assistant</h1>
+        
+        <form id="chat-form">
+            <label for="prompt">Enter your prompt:</label><br>
+            <input type="text" id="prompt" name="prompt"><br><br>
+            <button type="submit">Send</button>
+            
+        </form>
+
+        <!-- Clear Response Button -->
+        <button id="clear-response-btn">Clear Response</button>
+
+        <div id="response"></div>
+
+        <script>
+            // Handle the form submission
+            document.getElementById("chat-form").addEventListener("submit", async (event) => {
+                event.preventDefault(); // Prevent the form from refreshing the page
+
+                const prompt = document.getElementById("prompt").value;  // Get the input value
+
+                // Send a GET request to the FastAPI server with the prompt as a query parameter
+                const response = await fetch(`/chat?prompt=${encodeURIComponent(prompt)}`, {
+                    method: "GET", // Set the HTTP method to GET
+                });
+
+                // Check if the response is OK
+                if (!response.ok) {
+                    document.getElementById("response").innerText = "Error: " + response.statusText;
+                    return;
+                }
+
+                // Handle the streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let done = false;
+                let result = '';
+
+                // Continuously read chunks of data and append them to the result
+                while (!done) {
+                    const { value, done: doneReading } = await reader.read();
+                    done = doneReading;
+                    // Decode the chunk and append it to the result
+                    result += decoder.decode(value, { stream: true });
+
+                    // Update the displayed response incrementally
+                    document.getElementById("response").innerText = result;
+                }
+            });
+
+            // Add event listener for the "Clear Response" button
+            document.getElementById("clear-response-btn").addEventListener("click", () => {
+                document.getElementById("response").innerHTML = ""; // Clear the response
+            });
+        </script>
+    </body>
+</html>
